@@ -71,10 +71,20 @@
       return includeSeconds ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(h)}:${pad(m)}`;
     },
 
-    getAnchorDate() {
+    getAnchorDate(records = []) {
       const now = new Date();
-      if (now.getFullYear() === 2026 && now.getMonth() === 10) return now;
-      return new Date(2026, 10, 23, 10, 8, 0); // 23 Nov 2026
+      // If dataset has active records (such as portal tracking month), sync with that active month
+      if (records && records.length > 0) {
+        const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
+        if (sorted[0] && sorted[0].date) {
+          const [y, m, d] = sorted[0].date.split('-').map(Number);
+          if (now.getFullYear() === y && now.getMonth() === (m - 1)) {
+            return now;
+          }
+          return new Date(y, m - 1, Math.min(d, 28));
+        }
+      }
+      return now;
     },
 
     formatDateISO(d) {
@@ -294,8 +304,8 @@
 
       // Quick Punch from Home Add button or Log Add button
       const openPunch = () => {
-        const todayStr = TimeEngine.formatDateISO(TimeEngine.getAnchorDate());
-        this.openPunchModal(todayStr);
+        const todayStr = TimeEngine.formatDateISO(TimeEngine.getAnchorDate(this.data ? this.data.records : []));
+        this.openPunchModal(todayStr, null, false);
       };
       this.btnSparkleAction.addEventListener('click', openPunch);
       this.btnLogNewPunch.addEventListener('click', openPunch);
@@ -337,12 +347,28 @@
       });
 
       this.btnDeleteRecord.addEventListener('click', () => {
-        if (this.editingRecordId && confirm('Delete this attendance entry?')) {
-          this.data.records = this.data.records.filter((r) => r.id !== this.editingRecordId);
+        const dateToDelete = this.entryDate.value;
+        if (!dateToDelete) return;
+        if (confirm(`Delete attendance entry for ${dateToDelete}?`)) {
+          // 1. Remove from records
+          if (this.editingRecordId) {
+            this.data.records = this.data.records.filter((r) => r.id !== this.editingRecordId);
+          }
+          this.data.records = this.data.records.filter((r) => r.date !== dateToDelete);
+
+          // 2. Remove from custom holidays if matching date
+          this.data.holidays = this.data.holidays.filter((h) => h.date !== dateToDelete);
+
+          // 3. Keep in excludedDates so auto-generator doesn't show it again
+          if (!this.data.excludedDates) this.data.excludedDates = [];
+          if (!this.data.excludedDates.includes(dateToDelete)) {
+            this.data.excludedDates.push(dateToDelete);
+          }
+
           Storage.save(this.data);
           this.closePunchModal();
           this.renderAll();
-          this.showToast('Record deleted');
+          this.showToast('Entry deleted');
         }
       });
 
@@ -471,7 +497,7 @@
         totalExtraSec += calc.netExtraSec;
       });
 
-      const anchor = TimeEngine.getAnchorDate();
+      const anchor = TimeEngine.getAnchorDate(this.data ? this.data.records : []);
       const year = anchor.getFullYear();
       const month = anchor.getMonth();
       const currentDay = anchor.getDate();
@@ -528,11 +554,12 @@
     // ==========================================================================
     renderLog() {
       if (!this.data) return;
-      const anchor = TimeEngine.getAnchorDate();
+      const anchor = TimeEngine.getAnchorDate(this.data ? this.data.records : []);
       const todayISO = TimeEngine.formatDateISO(anchor);
       const curYear = anchor.getFullYear();
       const curMonth = anchor.getMonth();
       const daysInCurMonth = new Date(curYear, curMonth + 1, 0).getDate();
+      const excluded = new Set(this.data.excludedDates || []);
 
       // Collect records by date
       const recordMap = new Map();
@@ -543,14 +570,16 @@
       this.data.records.forEach((r) => {
         const [y, m] = r.date.split('-').map(Number);
         if (y === curYear && (m - 1) === curMonth) {
-          datesSet.add(r.date);
+          if (!excluded.has(r.date)) {
+            datesSet.add(r.date);
+          }
         }
       });
 
       // Automatically include all Sundays, Second Saturdays, and Government Holidays of this month
       for (let d = 1; d <= daysInCurMonth; d++) {
         const iso = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        if (this.getHolidayName(iso)) {
+        if (!excluded.has(iso) && this.getHolidayName(iso)) {
           datesSet.add(iso);
         }
       }
@@ -625,7 +654,7 @@
           <td class="cell-time">${outDisplay}</td>
         `;
 
-        tr.addEventListener('click', () => this.openPunchModal(dateStr, rec ? rec.id : null));
+        tr.addEventListener('click', () => this.openPunchModal(dateStr, rec ? rec.id : null, true));
         this.logTableBody.appendChild(tr);
       });
     }
@@ -661,7 +690,7 @@
       });
     }
 
-    openPunchModal(dateStr, recordId = null) {
+    openPunchModal(dateStr, recordId = null, fromTableRow = false) {
       this.editingRecordId = recordId;
       this.entryDate.value = dateStr;
 
@@ -692,7 +721,16 @@
         this.entryInTime.value = rec.inTime || '';
         this.entryOutTime.value = rec.outTime || '';
         this.btnDeleteRecord.style.display = 'block';
+      } else if (fromTableRow) {
+        this.editingRecordId = null;
+        this.modalPunchTitle.textContent = 'Edit Attendance';
+        this.entryStatus.value = 'P';
+        this.entryDuration.value = 'FULL';
+        this.entryInTime.value = this.data.shiftStart || '10:15:00';
+        this.entryOutTime.value = this.data.shiftEnd || '17:15:00';
+        this.btnDeleteRecord.style.display = 'block';
       } else {
+        this.editingRecordId = null;
         this.modalPunchTitle.textContent = 'Log Attendance';
         this.entryStatus.value = 'P';
         this.entryDuration.value = 'FULL';
@@ -789,6 +827,11 @@
           inTime: isFullODorLeave ? '' : inTime,
           outTime: isFullODorLeave ? '' : outTime
         });
+      }
+
+      // If date was previously excluded/deleted, un-exclude it now that it has been saved
+      if (this.data.excludedDates) {
+        this.data.excludedDates = this.data.excludedDates.filter((d) => d !== date);
       }
 
       Storage.save(this.data);

@@ -140,40 +140,28 @@ html, body {
 /* Digits row */
 .time-digits-row {
   display: flex;
-  align-items: center;
-  gap: 16px;
+  align-items: baseline;
+  gap: 18px;
 }
 
 .digit-box {
   display: flex;
   align-items: baseline;
-  gap: 3px;
+  gap: 2px;
 }
 
 .digit-val {
-  font-size: 52px;
+  font-size: 54px;
   font-weight: 500;
   line-height: 1;
   letter-spacing: -1px;
 }
 
-.unit-box {
-  display: flex;
-  flex-direction: column;
-  line-height: 1;
-}
-
 .unit-letter {
-  font-size: 20px;
+  font-size: 24px;
   font-weight: 500;
-  line-height: 1.1;
-}
-
-.unit-word {
-  font-size: 11px;
-  color: var(--text-muted);
-  font-weight: 400;
-  margin-top: 2px;
+  line-height: 1;
+  margin-left: 1px;
 }
 
 .box-orange .digit-val,
