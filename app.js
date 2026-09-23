@@ -565,6 +565,17 @@
       const recordMap = new Map();
       this.data.records.forEach((r) => recordMap.set(r.date, r));
 
+      // Cutoff date: maximum of current date or the latest entered date in this month
+      let cutoffDate = todayISO;
+      this.data.records.forEach((r) => {
+        const [y, m] = r.date.split('-').map(Number);
+        if (y === curYear && (m - 1) === curMonth) {
+          if (r.date > cutoffDate) {
+            cutoffDate = r.date;
+          }
+        }
+      });
+
       // Build consolidated set of dates for the PRESENT month
       const datesSet = new Set();
       this.data.records.forEach((r) => {
@@ -576,10 +587,12 @@
         }
       });
 
-      // Automatically include all Sundays, Second Saturdays, and Government Holidays of this month
+      // Automatically include Sundays, Second Saturdays, and Government Holidays
+      // ONLY up to the current date (or last entered date in the month).
+      // Holidays after the cutoff date are hidden from the log table.
       for (let d = 1; d <= daysInCurMonth; d++) {
         const iso = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-        if (!excluded.has(iso) && this.getHolidayName(iso)) {
+        if (iso <= cutoffDate && !excluded.has(iso) && this.getHolidayName(iso)) {
           datesSet.add(iso);
         }
       }
