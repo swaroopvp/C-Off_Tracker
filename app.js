@@ -618,10 +618,8 @@
           outDisplay = '--';
         }
 
-        const plannedIndicator = isFuture ? '<span class="tag-future-indicator">(Planned)</span>' : '';
-
         tr.innerHTML = `
-          <td class="cell-date">${dateFormatted}${plannedIndicator}</td>
+          <td class="cell-date">${dateFormatted}</td>
           <td class="cell-day">${dayName}</td>
           <td class="cell-time">${inDisplay}</td>
           <td class="cell-time">${outDisplay}</td>
