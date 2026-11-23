@@ -231,14 +231,6 @@
       // Log elements
       this.btnLogNewPunch = document.getElementById('btnLogNewPunch');
       this.logTableBody = document.getElementById('logTableBody');
-      this.btnPrevMonth = document.getElementById('btnPrevMonth');
-      this.btnNextMonth = document.getElementById('btnNextMonth');
-      this.displayLogMonth = document.getElementById('displayLogMonth');
-      this.inputMonthPicker = document.getElementById('inputMonthPicker');
-
-      const anchor = TimeEngine.getAnchorDate();
-      this.viewYear = anchor.getFullYear();
-      this.viewMonth = anchor.getMonth();
 
       // Settings elements
       this.inputSettingsName = document.getElementById('inputSettingsName');
@@ -300,47 +292,10 @@
         this.showToast(`Welcome, ${enteredName}!`);
       });
 
-      // Month Navigation in Log
-      if (this.btnPrevMonth) {
-        this.btnPrevMonth.addEventListener('click', () => {
-          this.viewMonth--;
-          if (this.viewMonth < 0) {
-            this.viewMonth = 11;
-            this.viewYear--;
-          }
-          this.renderLog();
-        });
-      }
-
-      if (this.btnNextMonth) {
-        this.btnNextMonth.addEventListener('click', () => {
-          this.viewMonth++;
-          if (this.viewMonth > 11) {
-            this.viewMonth = 0;
-            this.viewYear++;
-          }
-          this.renderLog();
-        });
-      }
-
-      if (this.inputMonthPicker) {
-        this.inputMonthPicker.addEventListener('change', (e) => {
-          if (!e.target.value) return;
-          const [y, m] = e.target.value.split('-').map(Number);
-          this.viewYear = y;
-          this.viewMonth = m - 1;
-          this.renderLog();
-        });
-      }
-
-      // Quick Punch from Sparkle or Log Button
+      // Quick Punch from Home Add button or Log Add button
       const openPunch = () => {
-        const anchor = TimeEngine.getAnchorDate();
-        const todayStr = TimeEngine.formatDateISO(anchor);
-        const defaultDate = (this.viewYear === anchor.getFullYear() && this.viewMonth === anchor.getMonth())
-          ? todayStr
-          : `${this.viewYear}-${String(this.viewMonth + 1).padStart(2, '0')}-01`;
-        this.openPunchModal(defaultDate);
+        const todayStr = TimeEngine.formatDateISO(TimeEngine.getAnchorDate());
+        this.openPunchModal(todayStr);
       };
       this.btnSparkleAction.addEventListener('click', openPunch);
       this.btnLogNewPunch.addEventListener('click', openPunch);
@@ -569,28 +524,21 @@
     }
 
     // ==========================================================================
-    // TABULAR LOG: FUTURE DATES LIGHTER & FORENOON/AFTERNOON RECOGNITION
+    // TABULAR LOG: PRESENT MONTH ONLY (FUTURE DATES LIGHTER & FORENOON/AFTERNOON)
     // ==========================================================================
     renderLog() {
       if (!this.data) return;
-      const curYear = this.viewYear;
-      const curMonth = this.viewMonth;
-      const daysInCurMonth = new Date(curYear, curMonth + 1, 0).getDate();
-
-      // Update month navigation header
-      const monthDate = new Date(curYear, curMonth, 1);
-      const monthTitle = monthDate.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
-      if (this.displayLogMonth) this.displayLogMonth.textContent = monthTitle;
-      if (this.inputMonthPicker) this.inputMonthPicker.value = `${curYear}-${String(curMonth + 1).padStart(2, '0')}`;
-
       const anchor = TimeEngine.getAnchorDate();
       const todayISO = TimeEngine.formatDateISO(anchor);
+      const curYear = anchor.getFullYear();
+      const curMonth = anchor.getMonth();
+      const daysInCurMonth = new Date(curYear, curMonth + 1, 0).getDate();
 
       // Collect records by date
       const recordMap = new Map();
       this.data.records.forEach((r) => recordMap.set(r.date, r));
 
-      // Build consolidated set of dates for THIS month
+      // Build consolidated set of dates for the PRESENT month
       const datesSet = new Set();
       this.data.records.forEach((r) => {
         const [y, m] = r.date.split('-').map(Number);
@@ -599,7 +547,7 @@
         }
       });
 
-      // Automatically include all Sundays, Second Saturdays, and Government Holidays in current viewed month
+      // Automatically include all Sundays, Second Saturdays, and Government Holidays of this month
       for (let d = 1; d <= daysInCurMonth; d++) {
         const iso = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
         if (this.getHolidayName(iso)) {
