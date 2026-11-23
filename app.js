@@ -856,7 +856,7 @@
         this.previewExtra.textContent = res.netExtraStr;
         this.previewExtra.className = 'extra-positive-green';
       } else {
-        this.previewExtra.textContent = '----';
+        this.previewExtra.textContent = '00:00:00';
         this.previewExtra.className = 'extra-neutral';
       }
     }
