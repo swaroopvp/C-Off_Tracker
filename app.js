@@ -11,16 +11,6 @@
   const TARGET_EXTRA_SECONDS = 10 * 3600; // Strictly 10:00:00 (36,000 seconds)
 
   const DEFAULT_HOLIDAYS = [
-    { date: '2026-01-15', name: 'Makara Sankranti' },
-    { date: '2026-01-26', name: 'Republic Day' },
-    { date: '2026-03-19', name: 'Ugadi' },
-    { date: '2026-04-14', name: 'Dr. B.R. Ambedkar Jayanti' },
-    { date: '2026-05-01', name: 'May Day' },
-    { date: '2026-08-15', name: 'Independence Day' },
-    { date: '2026-10-02', name: 'Gandhi Jayanti' },
-    { date: '2026-10-20', name: 'Vijayadashami' },
-    { date: '2026-11-01', name: 'Kannada Rajyotsava' },
-    { date: '2026-11-08', name: 'Deepavali' },
     { date: '2026-12-25', name: 'Christmas' }
   ];
 
@@ -48,20 +38,8 @@
       return includeSeconds ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(h)}:${pad(m)}`;
     },
 
-    getAnchorDate(records = []) {
-      const now = new Date();
-      // If dataset has active records (such as portal tracking month), sync with that active month
-      if (records && records.length > 0) {
-        const sorted = [...records].sort((a, b) => b.date.localeCompare(a.date));
-        if (sorted[0] && sorted[0].date) {
-          const [y, m, d] = sorted[0].date.split('-').map(Number);
-          if (now.getFullYear() === y && now.getMonth() === (m - 1)) {
-            return now;
-          }
-          return new Date(y, m - 1, Math.min(d, 28));
-        }
-      }
-      return now;
+    getAnchorDate() {
+      return new Date();
     },
 
     formatDateISO(d) {
@@ -156,8 +134,27 @@
             if (!parsed.clearedInitialDemo) {
               parsed.records = [];
               parsed.clearedInitialDemo = true;
-              this.save(parsed);
             }
+
+            // Prune any records outside the current month
+            const now = new Date();
+            const curY = now.getFullYear();
+            const curM = now.getMonth();
+            if (parsed.records && parsed.records.length > 0) {
+              parsed.records = parsed.records.filter((r) => {
+                if (!r.date) return false;
+                const [y, m] = r.date.split('-').map(Number);
+                return y === curY && (m - 1) === curM;
+              });
+            }
+
+            // Keep only Christmas in holidays (all others have passed)
+            if (!parsed.hasOnlyChristmasHoliday) {
+              parsed.holidays = [{ date: '2026-12-25', name: 'Christmas' }];
+              parsed.hasOnlyChristmasHoliday = true;
+            }
+
+            this.save(parsed);
             return parsed;
           }
         }
@@ -182,7 +179,8 @@
         shiftEnd: '17:15:00',
         holidays: [...DEFAULT_HOLIDAYS],
         records: [],
-        clearedInitialDemo: true
+        clearedInitialDemo: true,
+        hasOnlyChristmasHoliday: true
       };
       this.save(data);
       return data;
@@ -725,6 +723,26 @@
 
     openPunchModal(dateStr, recordId = null, fromTableRow = false) {
       this.editingRecordId = recordId;
+
+      // Restrict date picker strictly to current month
+      const anchor = TimeEngine.getAnchorDate();
+      const curYear = anchor.getFullYear();
+      const curMonth = anchor.getMonth();
+      const firstDayStr = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-01`;
+      const lastDay = new Date(curYear, curMonth + 1, 0).getDate();
+      const lastDayStr = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(lastDay).padStart(2, '0')}`;
+      this.entryDate.min = firstDayStr;
+      this.entryDate.max = lastDayStr;
+
+      // If provided date is outside current month or missing, default to current anchor date
+      if (dateStr) {
+        const [y, m] = dateStr.split('-').map(Number);
+        if (y !== curYear || (m - 1) !== curMonth) {
+          dateStr = TimeEngine.formatDateISO(anchor);
+        }
+      } else {
+        dateStr = TimeEngine.formatDateISO(anchor);
+      }
       this.entryDate.value = dateStr;
 
       const rec = recordId ? this.data.records.find((r) => r.id === recordId) : this.data.records.find((r) => r.date === dateStr);
@@ -852,6 +870,16 @@
 
       if (!date) {
         this.showToast('Please select a date');
+        return;
+      }
+
+      // Restrict date strictly to the current month
+      const anchor = TimeEngine.getAnchorDate();
+      const curYear = anchor.getFullYear();
+      const curMonth = anchor.getMonth();
+      const [y, m] = date.split('-').map(Number);
+      if (y !== curYear || (m - 1) !== curMonth) {
+        this.showToast('Date must be within the current month');
         return;
       }
 
