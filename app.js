@@ -603,7 +603,7 @@
       if (sortedDates.length === 0) {
         this.logTableBody.innerHTML = `
           <tr class="table-empty-row">
-            <td colspan="4">No attendance records logged yet.</td>
+            <td colspan="5">No attendance records logged yet.</td>
           </tr>
         `;
         return;
@@ -626,46 +626,76 @@
         const holName = this.getHolidayName(dateStr);
         const rec = recordMap.get(dateStr);
 
-        let inDisplay = '--:--:--';
-        let outDisplay = '--:--:--';
+        // Case 1: Holiday row without attendance punches -> holiday name centered across Punch In, Punch Out, Remarks
+        const isHolidayOnly = (holName || (rec && rec.status === 'PH')) && (!rec || (!rec.inTime && !rec.outTime));
 
-        if (rec && rec.inTime && rec.outTime) {
-          if (rec.status === 'OD_HALF' || (rec.status === 'OD' && (rec.duration === 'FN' || rec.duration === 'AN'))) {
-            const session = rec.duration || TimeEngine.identifySession(rec.inTime, rec.outTime);
-            const tagClass = session === 'FN' ? 'tag-fn' : 'tag-an';
-            inDisplay = `${rec.inTime} <span class="session-tag ${tagClass}">OD ${session}</span>`;
-            outDisplay = rec.outTime;
-          } else if (rec.status === 'CL_HALF' || (rec.status === 'CL' && (rec.duration === 'FN' || rec.duration === 'AN'))) {
-            const session = rec.duration || TimeEngine.identifySession(rec.inTime, rec.outTime);
-            const tagClass = session === 'FN' ? 'tag-fn' : 'tag-an';
-            inDisplay = `${rec.inTime} <span class="session-tag ${tagClass}">Leave ${session}</span>`;
-            outDisplay = rec.outTime;
-          } else {
-            if (holName) {
-              inDisplay = `${rec.inTime} <span class="session-tag tag-fn">${holName}</span>`;
-            } else {
-              inDisplay = rec.inTime;
-            }
-            outDisplay = rec.outTime;
-          }
-        } else if (rec && rec.status === 'OD') {
-          inDisplay = '<span class="cell-status-od">OD</span>';
-          outDisplay = '--';
-        } else if (rec && rec.status === 'CL') {
-          inDisplay = '<span class="cell-status-leave">Leave</span>';
-          outDisplay = '--';
-        } else if (holName || (rec && rec.status === 'PH')) {
+        if (isHolidayOnly) {
           const displayName = holName || 'Public Holiday';
-          inDisplay = `<span class="cell-status-ph">${displayName}</span>`;
-          outDisplay = '--';
-        }
+          tr.innerHTML = `
+            <td class="cell-date">${dateFormatted}</td>
+            <td class="cell-day">${dayName}</td>
+            <td colspan="3" class="cell-holiday-centered">${displayName}</td>
+          `;
+        } else {
+          // Case 2: Attendance entry (Punch / OD / Leave / Worked on Holiday)
+          let inDisplay = '--:--:--';
+          let outDisplay = '--:--:--';
+          let remarksHtml = '';
 
-        tr.innerHTML = `
-          <td class="cell-date">${dateFormatted}</td>
-          <td class="cell-day">${dayName}</td>
-          <td class="cell-time">${inDisplay}</td>
-          <td class="cell-time">${outDisplay}</td>
-        `;
+          // Calculate extra time for this entry
+          let netExtraSec = 0;
+          let netExtraStr = '';
+          if (rec) {
+            const calc = TimeEngine.calculateRecord({ ...rec, isHoliday: !!holName }, this.data.shiftStart, this.data.shiftEnd);
+            netExtraSec = calc.netExtraSec;
+            netExtraStr = calc.netExtraStr;
+          }
+
+          if (rec && rec.inTime && rec.outTime) {
+            inDisplay = rec.inTime;
+            outDisplay = rec.outTime;
+
+            if (rec.status === 'OD_HALF' || (rec.status === 'OD' && (rec.duration === 'FN' || rec.duration === 'AN'))) {
+              const session = rec.duration || TimeEngine.identifySession(rec.inTime, rec.outTime);
+              remarksHtml = `<span class="remark-tag remark-tag-od">OD ${session}</span>`;
+              if (netExtraSec > 0) {
+                remarksHtml += ` <span class="remark-extra-green">${netExtraStr}</span>`;
+              }
+            } else if (rec.status === 'CL_HALF' || (rec.status === 'CL' && (rec.duration === 'FN' || rec.duration === 'AN'))) {
+              const session = rec.duration || TimeEngine.identifySession(rec.inTime, rec.outTime);
+              remarksHtml = `<span class="remark-tag remark-tag-leave">Leave ${session}</span>`;
+              if (netExtraSec > 0) {
+                remarksHtml += ` <span class="remark-extra-green">${netExtraStr}</span>`;
+              }
+            } else {
+              // Regular Present or Worked on Holiday
+              if (holName) {
+                remarksHtml = `<span class="remark-tag remark-tag-leave">${holName}</span>`;
+                if (netExtraSec > 0) {
+                  remarksHtml += ` <span class="remark-extra-green">${netExtraStr}</span>`;
+                }
+              } else if (netExtraSec > 0) {
+                remarksHtml += `<span class="remark-extra-green">${netExtraStr}</span>`;
+              }
+            }
+          } else if (rec && rec.status === 'OD') {
+            inDisplay = '--';
+            outDisplay = '--';
+            remarksHtml = `<span class="remark-tag remark-tag-od">OD</span>`;
+          } else if (rec && rec.status === 'CL') {
+            inDisplay = '--';
+            outDisplay = '--';
+            remarksHtml = `<span class="remark-tag remark-tag-leave">Leave</span>`;
+          }
+
+          tr.innerHTML = `
+            <td class="cell-date">${dateFormatted}</td>
+            <td class="cell-day">${dayName}</td>
+            <td class="cell-time">${inDisplay}</td>
+            <td class="cell-time">${outDisplay}</td>
+            <td class="cell-remarks">${remarksHtml}</td>
+          `;
+        }
 
         tr.addEventListener('click', () => this.openPunchModal(dateStr, rec ? rec.id : null, true));
         this.logTableBody.appendChild(tr);
@@ -795,10 +825,11 @@
       };
       const res = TimeEngine.calculateRecord(mock, this.data.shiftStart, this.data.shiftEnd);
       
-      this.previewExtra.textContent = res.netExtraStr;
       if (res.netExtraSec > 0) {
+        this.previewExtra.textContent = res.netExtraStr;
         this.previewExtra.className = 'extra-positive-green';
       } else {
+        this.previewExtra.textContent = '----';
         this.previewExtra.className = 'extra-neutral';
       }
     }
