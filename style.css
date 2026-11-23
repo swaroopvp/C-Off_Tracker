@@ -723,9 +723,16 @@ html, body {
   color: var(--text-muted);
 }
 
+.form-row-2col-top {
+  display: grid;
+  grid-template-columns: 1.15fr 1fr;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+
 .form-row-3col {
   display: grid;
-  grid-template-columns: 1.25fr 1fr 1fr;
+  grid-template-columns: 1.15fr 0.95fr 0.9fr;
   gap: 8px;
   margin-bottom: 12px;
 }
@@ -775,6 +782,26 @@ html, body {
   border-radius: 8px;
   font-size: 12.5px;
   outline: none;
+}
+
+.calc-preview-center {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 13px;
+  color: var(--text-muted);
+  padding: 4px 0 10px 0;
+  text-align: center;
+}
+
+.extra-positive-green {
+  color: #4ade80 !important;
+  font-weight: 700;
+}
+
+.extra-neutral {
+  color: #94a3b8 !important;
+  font-weight: 500;
 }
 
 .calc-preview {

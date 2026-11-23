@@ -213,7 +213,7 @@
         <form id="formPunch">
           <input type="hidden" id="entryRecordId">
           
-          <div class="form-row-3col">
+          <div id="modalTopRow" class="form-row-2col-top">
             <div class="form-col col-date">
               <label for="entryDate">Date</label>
               <input type="date" id="entryDate" class="minimal-input" required>
@@ -228,11 +228,12 @@
               </select>
             </div>
 
-            <div class="form-col col-time">
+            <div id="colTimeSession" class="form-col col-time" style="display: none;">
               <label for="entryDuration">Time</label>
               <select id="entryDuration" class="minimal-select">
                 <option value="FULL" selected>Full</option>
-                <option value="HALF">Half</option>
+                <option value="FN">FN</option>
+                <option value="AN">AN</option>
               </select>
             </div>
           </div>
@@ -249,9 +250,8 @@
             </div>
           </div>
 
-          <div class="calc-preview">
-            <span>Session: <strong id="previewSession">--</strong></span>
-            <span>Extra: <strong id="previewExtra">--:--:--</strong></span>
+          <div class="calc-preview-center">
+            <span>Extra Time: <strong id="previewExtra" class="extra-neutral">+00:00:00</strong></span>
           </div>
 
           <div class="modal-actions-row">

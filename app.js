@@ -84,14 +84,10 @@
       return `${y}-${m}-${day}`;
     },
 
-    isSecondOrFourthSaturday(y, m, d) {
+    isSecondSaturday(y, m, d) {
       const dt = new Date(y, m, d);
       if (dt.getDay() !== 6) return false;
-      let count = 0;
-      for (let i = 1; i <= d; i++) {
-        if (new Date(y, m, i).getDay() === 6) count++;
-      }
-      return count === 2 || count === 4;
+      return d >= 8 && d <= 14;
     },
 
     isSunday(y, m, d) {
@@ -132,7 +128,7 @@
 
         const punchedSec = outSec >= inSec ? outSec - inSec : (86400 - inSec) + outSec;
         const [y, m, d] = record.date.split('-').map(Number);
-        const isHol = this.isSunday(y, m - 1, d) || this.isSecondOrFourthSaturday(y, m - 1, d) || record.status === 'PH';
+        const isHol = this.isSunday(y, m - 1, d) || this.isSecondSaturday(y, m - 1, d) || record.status === 'PH' || !!record.isHoliday;
 
         // Even for half day, actual punched time is checked against the 7-hour threshold (no 3.5h split)
         const totalDaySec = punchedSec;
@@ -257,6 +253,8 @@
       this.modalPunchTitle = document.getElementById('modalPunchTitle');
       this.btnClosePunchModal = document.getElementById('btnClosePunchModal');
       this.formPunch = document.getElementById('formPunch');
+      this.modalTopRow = document.getElementById('modalTopRow');
+      this.colTimeSession = document.getElementById('colTimeSession');
       this.entryRecordId = document.getElementById('entryRecordId');
       this.entryDate = document.getElementById('entryDate');
       this.entryStatus = document.getElementById('entryStatus');
@@ -264,7 +262,6 @@
       this.punchTimesBlock = document.getElementById('punchTimesBlock');
       this.entryInTime = document.getElementById('entryInTime');
       this.entryOutTime = document.getElementById('entryOutTime');
-      this.previewSession = document.getElementById('previewSession');
       this.previewExtra = document.getElementById('previewExtra');
       this.btnDeleteRecord = document.getElementById('btnDeleteRecord');
 
@@ -311,11 +308,22 @@
       const handleStatusOrDurationChange = () => {
         const status = this.entryStatus.value;
         const duration = this.entryDuration.value;
-        // If Full Day OD or Full Day Leave, punch inputs are hidden
-        if ((status === 'OD' || status === 'CL') && duration === 'FULL') {
-          this.punchTimesBlock.style.display = 'none';
-        } else {
+        
+        // Show AN/FN time field only when status is not Present
+        if (status === 'P') {
+          this.colTimeSession.style.display = 'none';
+          this.modalTopRow.className = 'form-row-2col-top';
           this.punchTimesBlock.style.display = 'grid';
+        } else {
+          this.colTimeSession.style.display = 'flex';
+          this.modalTopRow.className = 'form-row-3col';
+
+          // If Full Day OD or Full Day Leave, punch inputs are hidden
+          if (duration === 'FULL') {
+            this.punchTimesBlock.style.display = 'none';
+          } else {
+            this.punchTimesBlock.style.display = 'grid';
+          }
         }
         updatePreview();
       };
@@ -432,10 +440,34 @@
       this.renderHolidaysList();
     }
 
+    getHolidayName(dateStr) {
+      if (!dateStr || !this.data) return null;
+      // 1. Check if configured in government holidays list first (e.g. Kannada Rajyotsava on Sunday)
+      const govHol = this.data.holidays.find((h) => h.date === dateStr);
+      if (govHol && govHol.name) {
+        return govHol.name;
+      }
+
+      // 2. All second saturdays and sundays are holidays
+      const [y, m, d] = dateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      const dayOfWeek = dt.getDay();
+
+      if (dayOfWeek === 0) {
+        return 'Sunday';
+      }
+      if (dayOfWeek === 6 && d >= 8 && d <= 14) {
+        return 'Second Saturday';
+      }
+
+      return null;
+    }
+
     computeExtraBalance() {
       let totalExtraSec = 0;
       this.data.records.forEach((r) => {
-        const calc = TimeEngine.calculateRecord(r, this.data.shiftStart, this.data.shiftEnd);
+        const holName = this.getHolidayName(r.date);
+        const calc = TimeEngine.calculateRecord({ ...r, isHoliday: !!holName }, this.data.shiftStart, this.data.shiftEnd);
         totalExtraSec += calc.netExtraSec;
       });
 
@@ -450,10 +482,10 @@
       for (let d = currentDay; d <= totalDaysInMonth; d++) {
         const iso = TimeEngine.formatDateISO(new Date(year, month, d));
         const isSun = TimeEngine.isSunday(year, month, d);
-        const is2nd4th = TimeEngine.isSecondOrFourthSaturday(year, month, d);
+        const is2ndSat = TimeEngine.isSecondSaturday(year, month, d);
         const isGovHol = holidaysSet.has(iso);
 
-        if (!isSun && !is2nd4th && !isGovHol) {
+        if (!isSun && !is2ndSat && !isGovHol) {
           remainingWorkingDays++;
         }
       }
@@ -495,13 +527,33 @@
     // TABULAR LOG: FUTURE DATES LIGHTER & FORENOON/AFTERNOON RECOGNITION
     // ==========================================================================
     renderLog() {
+      if (!this.data) return;
       const anchor = TimeEngine.getAnchorDate();
       const todayISO = TimeEngine.formatDateISO(anchor);
+      const curYear = anchor.getFullYear();
+      const curMonth = anchor.getMonth();
+      const daysInCurMonth = new Date(curYear, curMonth + 1, 0).getDate();
 
-      const records = [...this.data.records].sort((a, b) => b.date.localeCompare(a.date));
+      // Collect records by date
+      const recordMap = new Map();
+      this.data.records.forEach((r) => recordMap.set(r.date, r));
+
+      // Build consolidated set of dates: all logged records + all holidays in the month
+      const datesSet = new Set();
+      this.data.records.forEach((r) => datesSet.add(r.date));
+
+      // Automatically include all Sundays, Second Saturdays, and Government Holidays in current month
+      for (let d = 1; d <= daysInCurMonth; d++) {
+        const iso = `${curYear}-${String(curMonth + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+        if (this.getHolidayName(iso)) {
+          datesSet.add(iso);
+        }
+      }
+
+      const sortedDates = Array.from(datesSet).sort((a, b) => b.localeCompare(a));
       this.logTableBody.innerHTML = '';
 
-      if (records.length === 0) {
+      if (sortedDates.length === 0) {
         this.logTableBody.innerHTML = `
           <tr class="table-empty-row">
             <td colspan="4">No attendance records logged yet.</td>
@@ -510,8 +562,8 @@
         return;
       }
 
-      records.forEach((rec) => {
-        const [y, m, d] = rec.date.split('-').map(Number);
+      sortedDates.forEach((dateStr) => {
+        const [y, m, d] = dateStr.split('-').map(Number);
         const dt = new Date(y, m - 1, d);
         const dayName = dt.toLocaleDateString('en-US', { weekday: 'short' });
         const dateFormatted = `${String(d).padStart(2, '0')}/${String(m).padStart(2, '0')}/${y}`;
@@ -519,33 +571,46 @@
         const tr = document.createElement('tr');
 
         // Check if date is in the future (planned attendance)
-        const isFuture = rec.date > todayISO;
+        const isFuture = dateStr > todayISO;
         if (isFuture) {
           tr.classList.add('row-future');
         }
 
-        let inDisplay = rec.inTime || '--:--:--';
-        let outDisplay = rec.outTime || '--:--:--';
+        const holName = this.getHolidayName(dateStr);
+        const rec = recordMap.get(dateStr);
 
-        if (rec.status === 'PH') {
-          inDisplay = '<span class="cell-status-ph">Public Holiday</span>';
-          outDisplay = '--';
-        } else if (rec.status === 'OD') {
+        let inDisplay = '--:--:--';
+        let outDisplay = '--:--:--';
+
+        if (rec && rec.inTime && rec.outTime) {
+          if (rec.status === 'OD_HALF' || (rec.status === 'OD' && (rec.duration === 'FN' || rec.duration === 'AN'))) {
+            const session = rec.duration || TimeEngine.identifySession(rec.inTime, rec.outTime);
+            const tagClass = session === 'FN' ? 'tag-fn' : 'tag-an';
+            inDisplay = `${rec.inTime} <span class="session-tag ${tagClass}">OD ${session}</span>`;
+            outDisplay = rec.outTime;
+          } else if (rec.status === 'CL_HALF' || (rec.status === 'CL' && (rec.duration === 'FN' || rec.duration === 'AN'))) {
+            const session = rec.duration || TimeEngine.identifySession(rec.inTime, rec.outTime);
+            const tagClass = session === 'FN' ? 'tag-fn' : 'tag-an';
+            inDisplay = `${rec.inTime} <span class="session-tag ${tagClass}">Leave ${session}</span>`;
+            outDisplay = rec.outTime;
+          } else {
+            if (holName) {
+              inDisplay = `${rec.inTime} <span class="session-tag tag-fn">${holName}</span>`;
+            } else {
+              inDisplay = rec.inTime;
+            }
+            outDisplay = rec.outTime;
+          }
+        } else if (rec && rec.status === 'OD') {
           inDisplay = '<span class="cell-status-od">OD</span>';
           outDisplay = '--';
-        } else if (rec.status === 'CL') {
+        } else if (rec && rec.status === 'CL') {
           inDisplay = '<span class="cell-status-leave">Leave</span>';
           outDisplay = '--';
-        } else if (rec.status === 'OD_HALF') {
-          const session = TimeEngine.identifySession(rec.inTime, rec.outTime);
-          const tagClass = session === 'FN' ? 'tag-fn' : 'tag-an';
-          inDisplay = `${rec.inTime || '--'} <span class="session-tag ${tagClass}">OD ${session}</span>`;
-          outDisplay = rec.outTime || '--';
-        } else if (rec.status === 'CL_HALF') {
-          const session = TimeEngine.identifySession(rec.inTime, rec.outTime);
-          const tagClass = session === 'FN' ? 'tag-fn' : 'tag-an';
-          inDisplay = `${rec.inTime || '--'} <span class="session-tag ${tagClass}">Leave ${session}</span>`;
-          outDisplay = rec.outTime || '--';
+        } else if (holName || (rec && rec.status === 'PH')) {
+          const displayName = holName || 'Public Holiday';
+          inDisplay = `<span class="cell-status-ph">${displayName}</span>`;
+          outDisplay = '--';
         }
 
         const plannedIndicator = isFuture ? '<span class="tag-future-indicator">(Planned)</span>' : '';
@@ -557,7 +622,7 @@
           <td class="cell-time">${outDisplay}</td>
         `;
 
-        tr.addEventListener('click', () => this.openPunchModal(rec.date, rec.id));
+        tr.addEventListener('click', () => this.openPunchModal(dateStr, rec ? rec.id : null));
         this.logTableBody.appendChild(tr);
       });
     }
@@ -606,19 +671,19 @@
         
         if (rec.status === 'OD_HALF') {
           this.entryStatus.value = 'OD';
-          this.entryDuration.value = 'HALF';
+          this.entryDuration.value = (rec.duration === 'FN' || rec.duration === 'AN') ? rec.duration : 'FN';
         } else if (rec.status === 'CL_HALF') {
           this.entryStatus.value = 'CL';
-          this.entryDuration.value = 'HALF';
+          this.entryDuration.value = (rec.duration === 'FN' || rec.duration === 'AN') ? rec.duration : 'FN';
         } else if (rec.status === 'OD') {
           this.entryStatus.value = 'OD';
-          this.entryDuration.value = 'FULL';
+          this.entryDuration.value = (rec.duration === 'FN' || rec.duration === 'AN') ? rec.duration : 'FULL';
         } else if (rec.status === 'CL') {
           this.entryStatus.value = 'CL';
-          this.entryDuration.value = 'FULL';
+          this.entryDuration.value = (rec.duration === 'FN' || rec.duration === 'AN') ? rec.duration : 'FULL';
         } else {
           this.entryStatus.value = 'P';
-          this.entryDuration.value = rec.duration || 'FULL';
+          this.entryDuration.value = 'FULL';
         }
 
         this.entryInTime.value = rec.inTime || '';
@@ -633,11 +698,19 @@
         this.btnDeleteRecord.style.display = 'none';
       }
 
-      // If full day OD or full day Leave, hide punch inputs
-      if ((this.entryStatus.value === 'OD' || this.entryStatus.value === 'CL') && this.entryDuration.value === 'FULL') {
-        this.punchTimesBlock.style.display = 'none';
-      } else {
+      // Show AN/FN time field only when status is not Present
+      if (this.entryStatus.value === 'P') {
+        this.colTimeSession.style.display = 'none';
+        this.modalTopRow.className = 'form-row-2col-top';
         this.punchTimesBlock.style.display = 'grid';
+      } else {
+        this.colTimeSession.style.display = 'flex';
+        this.modalTopRow.className = 'form-row-3col';
+        if (this.entryDuration.value === 'FULL') {
+          this.punchTimesBlock.style.display = 'none';
+        } else {
+          this.punchTimesBlock.style.display = 'grid';
+        }
       }
 
       this.updatePunchPreview();
@@ -653,21 +726,27 @@
       const status = this.entryStatus.value;
       const duration = this.entryDuration.value;
       let effectiveStatus = status;
-      if (status === 'OD' && duration === 'HALF') effectiveStatus = 'OD_HALF';
-      if (status === 'CL' && duration === 'HALF') effectiveStatus = 'CL_HALF';
+      if (status === 'OD' && (duration === 'FN' || duration === 'AN' || duration === 'HALF')) effectiveStatus = 'OD_HALF';
+      if (status === 'CL' && (duration === 'FN' || duration === 'AN' || duration === 'HALF')) effectiveStatus = 'CL_HALF';
+
+      const holName = this.getHolidayName(this.entryDate.value);
 
       const mock = {
         date: this.entryDate.value || '2026-11-23',
         status: effectiveStatus,
         duration: duration,
         inTime: this.entryInTime.value,
-        outTime: this.entryOutTime.value
+        outTime: this.entryOutTime.value,
+        isHoliday: !!holName
       };
       const res = TimeEngine.calculateRecord(mock, this.data.shiftStart, this.data.shiftEnd);
       
-      const session = TimeEngine.identifySession(this.entryInTime.value, this.entryOutTime.value);
-      this.previewSession.textContent = session === 'FN' ? 'Forenoon (FN)' : 'Afternoon (AN)';
       this.previewExtra.textContent = res.netExtraStr;
+      if (res.netExtraSec > 0) {
+        this.previewExtra.className = 'extra-positive-green';
+      } else {
+        this.previewExtra.className = 'extra-neutral';
+      }
     }
 
     savePunchRecord() {
@@ -681,9 +760,9 @@
 
       let effectiveStatus = status;
       if (status === 'OD') {
-        effectiveStatus = duration === 'HALF' ? 'OD_HALF' : 'OD';
+        effectiveStatus = (duration === 'FN' || duration === 'AN' || duration === 'HALF') ? 'OD_HALF' : 'OD';
       } else if (status === 'CL') {
-        effectiveStatus = duration === 'HALF' ? 'CL_HALF' : 'CL';
+        effectiveStatus = (duration === 'FN' || duration === 'AN' || duration === 'HALF') ? 'CL_HALF' : 'CL';
       } else {
         effectiveStatus = 'P';
       }
