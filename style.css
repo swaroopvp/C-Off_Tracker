@@ -522,6 +522,7 @@ html, body {
 
 .time-field-wrap {
   flex: 1;
+  min-width: 0;
   display: flex;
   align-items: center;
   gap: 4px;
@@ -539,6 +540,7 @@ html, body {
 
 .minimal-input {
   flex: 1;
+  min-width: 0;
   background: #12151e;
   border: 1px solid var(--border-subtle);
   color: #ffffff;
@@ -577,9 +579,23 @@ html, body {
   display: flex;
   gap: 6px;
   align-items: center;
+  width: 100%;
+}
+
+.add-hol-row #newHolidayDate {
+  flex: 0 0 auto;
+  width: auto;
+  max-width: 130px;
+}
+
+.add-hol-row #newHolidayName {
+  flex: 1 1 0px;
+  min-width: 0;
+  width: 100%;
 }
 
 .add-hol-row .btn-pill-action {
+  flex: 0 0 auto;
   padding: 8px 12px;
   font-size: calc(11.5px * var(--ui-font-scale));
 }
