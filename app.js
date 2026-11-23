@@ -260,6 +260,7 @@
       this.entryRecordId = document.getElementById('entryRecordId');
       this.entryDate = document.getElementById('entryDate');
       this.entryStatus = document.getElementById('entryStatus');
+      this.entryDuration = document.getElementById('entryDuration');
       this.punchTimesBlock = document.getElementById('punchTimesBlock');
       this.entryInTime = document.getElementById('entryInTime');
       this.entryOutTime = document.getElementById('entryOutTime');
@@ -307,17 +308,20 @@
       this.entryInTime.addEventListener('input', updatePreview);
       this.entryOutTime.addEventListener('input', updatePreview);
       
-      this.entryStatus.addEventListener('change', () => {
+      const handleStatusOrDurationChange = () => {
         const status = this.entryStatus.value;
-        // Full Day OD and Full Day Leave do not require punching times
-        if (['OD', 'CL'].includes(status)) {
+        const duration = this.entryDuration.value;
+        // If Full Day OD or Full Day Leave, punch inputs are hidden
+        if ((status === 'OD' || status === 'CL') && duration === 'FULL') {
           this.punchTimesBlock.style.display = 'none';
         } else {
-          // Present, Half Day OD, and Half Day Leave require punch times
-          this.punchTimesBlock.style.display = 'flex';
+          this.punchTimesBlock.style.display = 'grid';
         }
         updatePreview();
-      });
+      };
+
+      this.entryStatus.addEventListener('change', handleStatusOrDurationChange);
+      this.entryDuration.addEventListener('change', handleStatusOrDurationChange);
 
       this.formPunch.addEventListener('submit', (e) => {
         e.preventDefault();
@@ -527,10 +531,10 @@
           inDisplay = '<span class="cell-status-ph">Public Holiday</span>';
           outDisplay = '--';
         } else if (rec.status === 'OD') {
-          inDisplay = '<span class="cell-status-od">On Duty (Full)</span>';
+          inDisplay = '<span class="cell-status-od">OD</span>';
           outDisplay = '--';
         } else if (rec.status === 'CL') {
-          inDisplay = '<span class="cell-status-leave">Leave (Full)</span>';
+          inDisplay = '<span class="cell-status-leave">Leave</span>';
           outDisplay = '--';
         } else if (rec.status === 'OD_HALF') {
           const session = TimeEngine.identifySession(rec.inTime, rec.outTime);
@@ -599,23 +603,41 @@
         this.editingRecordId = rec.id;
         this.modalPunchTitle.textContent = 'Edit Attendance';
         this.entryDate.value = rec.date;
-        this.entryStatus.value = rec.status || 'P';
+        
+        if (rec.status === 'OD_HALF') {
+          this.entryStatus.value = 'OD';
+          this.entryDuration.value = 'HALF';
+        } else if (rec.status === 'CL_HALF') {
+          this.entryStatus.value = 'CL';
+          this.entryDuration.value = 'HALF';
+        } else if (rec.status === 'OD') {
+          this.entryStatus.value = 'OD';
+          this.entryDuration.value = 'FULL';
+        } else if (rec.status === 'CL') {
+          this.entryStatus.value = 'CL';
+          this.entryDuration.value = 'FULL';
+        } else {
+          this.entryStatus.value = 'P';
+          this.entryDuration.value = rec.duration || 'FULL';
+        }
+
         this.entryInTime.value = rec.inTime || '';
         this.entryOutTime.value = rec.outTime || '';
         this.btnDeleteRecord.style.display = 'block';
       } else {
         this.modalPunchTitle.textContent = 'Log Attendance';
         this.entryStatus.value = 'P';
+        this.entryDuration.value = 'FULL';
         this.entryInTime.value = this.data.shiftStart || '10:15:00';
         this.entryOutTime.value = this.data.shiftEnd || '17:15:00';
         this.btnDeleteRecord.style.display = 'none';
       }
 
       // If full day OD or full day Leave, hide punch inputs
-      if (['OD', 'CL'].includes(this.entryStatus.value)) {
+      if ((this.entryStatus.value === 'OD' || this.entryStatus.value === 'CL') && this.entryDuration.value === 'FULL') {
         this.punchTimesBlock.style.display = 'none';
       } else {
-        this.punchTimesBlock.style.display = 'flex';
+        this.punchTimesBlock.style.display = 'grid';
       }
 
       this.updatePunchPreview();
@@ -628,9 +650,16 @@
     }
 
     updatePunchPreview() {
+      const status = this.entryStatus.value;
+      const duration = this.entryDuration.value;
+      let effectiveStatus = status;
+      if (status === 'OD' && duration === 'HALF') effectiveStatus = 'OD_HALF';
+      if (status === 'CL' && duration === 'HALF') effectiveStatus = 'CL_HALF';
+
       const mock = {
         date: this.entryDate.value || '2026-11-23',
-        status: this.entryStatus.value,
+        status: effectiveStatus,
+        duration: duration,
         inTime: this.entryInTime.value,
         outTime: this.entryOutTime.value
       };
@@ -644,25 +673,39 @@
     savePunchRecord() {
       const date = this.entryDate.value;
       const status = this.entryStatus.value;
+      const duration = this.entryDuration.value;
       const inTime = this.entryInTime.value;
       const outTime = this.entryOutTime.value;
 
       if (!date) return;
 
+      let effectiveStatus = status;
+      if (status === 'OD') {
+        effectiveStatus = duration === 'HALF' ? 'OD_HALF' : 'OD';
+      } else if (status === 'CL') {
+        effectiveStatus = duration === 'HALF' ? 'CL_HALF' : 'CL';
+      } else {
+        effectiveStatus = 'P';
+      }
+
+      const isFullODorLeave = (effectiveStatus === 'OD' || effectiveStatus === 'CL');
+
       let rec = this.data.records.find((r) => r.id === this.editingRecordId) || this.data.records.find((r) => r.date === date);
 
       if (rec) {
         rec.date = date;
-        rec.status = status;
-        rec.inTime = ['OD', 'CL'].includes(status) ? '' : inTime;
-        rec.outTime = ['OD', 'CL'].includes(status) ? '' : outTime;
+        rec.status = effectiveStatus;
+        rec.duration = duration;
+        rec.inTime = isFullODorLeave ? '' : inTime;
+        rec.outTime = isFullODorLeave ? '' : outTime;
       } else {
         this.data.records.push({
           id: `rec-${date.replace(/-/g, '')}`,
           date,
-          status,
-          inTime: ['OD', 'CL'].includes(status) ? '' : inTime,
-          outTime: ['OD', 'CL'].includes(status) ? '' : outTime
+          status: effectiveStatus,
+          duration: duration,
+          inTime: isFullODorLeave ? '' : inTime,
+          outTime: isFullODorLeave ? '' : outTime
         });
       }
 

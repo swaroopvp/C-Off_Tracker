@@ -213,37 +213,45 @@
         <form id="formPunch">
           <input type="hidden" id="entryRecordId">
           
-          <div class="form-row">
-            <label for="entryDate">Date</label>
-            <input type="date" id="entryDate" class="minimal-input" required>
+          <div class="form-row-3col">
+            <div class="form-col col-date">
+              <label for="entryDate">Date</label>
+              <input type="date" id="entryDate" class="minimal-input" required>
+            </div>
+
+            <div class="form-col col-status">
+              <label for="entryStatus">Status</label>
+              <select id="entryStatus" class="minimal-select">
+                <option value="P">Present</option>
+                <option value="OD">OD</option>
+                <option value="CL">Leave</option>
+              </select>
+            </div>
+
+            <div class="form-col col-time">
+              <label for="entryDuration">Time</label>
+              <select id="entryDuration" class="minimal-select">
+                <option value="FULL" selected>Full</option>
+                <option value="HALF">Half</option>
+              </select>
+            </div>
           </div>
 
-          <div class="form-row">
-            <label for="entryStatus">Status</label>
-            <select id="entryStatus" class="minimal-select">
-              <option value="P">Present</option>
-              <option value="OD">On Duty (OD) - Full Day</option>
-              <option value="OD_HALF">On Duty (OD) - Half Day</option>
-              <option value="CL">Leave - Full Day</option>
-              <option value="CL_HALF">Leave - Half Day</option>
-            </select>
-          </div>
-
-          <div id="punchTimesBlock" class="punch-times-block">
-            <div class="form-row">
+          <div id="punchTimesBlock" class="form-row-2col">
+            <div class="form-col">
               <label for="entryInTime">Punch In Time</label>
               <input type="time" id="entryInTime" class="minimal-input" step="1">
             </div>
 
-            <div class="form-row">
+            <div class="form-col">
               <label for="entryOutTime">Punch Out Time</label>
               <input type="time" id="entryOutTime" class="minimal-input" step="1">
             </div>
+          </div>
 
-            <div class="calc-preview">
-              <span>Session: <strong id="previewSession">--</strong></span>
-              <span>Extra: <strong id="previewExtra">--:--:--</strong></span>
-            </div>
+          <div class="calc-preview">
+            <span>Session: <strong id="previewSession">--</strong></span>
+            <span>Extra: <strong id="previewExtra">--:--:--</strong></span>
           </div>
 
           <div class="modal-actions-row">
