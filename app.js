@@ -1,6 +1,6 @@
 /**
  * Pure Minimalist Comp-Off Tracker
- * Target: Exactly 10:00:00 extra hours = 1 day of Compensatory-off.
+ * Target: Exactly 10:00:00 extra hours = 1 day of Compensatory Off.
  * Tabular Log Layout | Office Hours with Seconds & Inline Save | Full/Half Day OD & Leave
  */
 
@@ -239,7 +239,6 @@
       this.btnAddHoliday = document.getElementById('btnAddHoliday');
       this.holidaysListContainer = document.getElementById('holidaysListContainer');
       this.btnOpenBulkHolidays = document.getElementById('btnOpenBulkHolidays');
-      this.btnClearAllRecords = document.getElementById('btnClearAllRecords');
 
       // Modals
       this.modalNameOnboarding = document.getElementById('modalNameOnboarding');
@@ -299,6 +298,7 @@
 
       // Punch modal live preview & dynamic punch block toggle
       const updatePreview = () => this.updatePunchPreview();
+      this.entryDate.addEventListener('change', updatePreview);
       this.entryInTime.addEventListener('input', updatePreview);
       this.entryOutTime.addEventListener('input', updatePreview);
       
@@ -429,19 +429,6 @@
         this.renderHome();
         this.showToast('Holidays updated');
       });
-
-      // Clear all attendance records to start afresh
-      if (this.btnClearAllRecords) {
-        this.btnClearAllRecords.addEventListener('click', () => {
-          if (confirm('Clear all attendance logs to start afresh?')) {
-            this.data.records = [];
-            if (this.data.excludedDates) this.data.excludedDates = [];
-            Storage.save(this.data);
-            this.renderAll();
-            this.showToast('All attendance logs cleared');
-          }
-        });
-      }
     }
 
     openOnboarding() {
@@ -504,17 +491,30 @@
       const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
       const holidaysSet = new Set(this.data.holidays.map((h) => h.date));
 
-      let remainingWorkingDays = 0;
-      for (let d = currentDay; d <= totalDaysInMonth; d++) {
+      // Calculate total working days in this month and how many working days have been logged
+      let totalWorkingDays = 0;
+      let loggedWorkingDays = 0;
+      const loggedDates = new Set((this.data.records || []).map((r) => r.date));
+
+      for (let d = 1; d <= totalDaysInMonth; d++) {
         const iso = TimeEngine.formatDateISO(new Date(year, month, d));
         const isSun = TimeEngine.isSunday(year, month, d);
         const is2ndSat = TimeEngine.isSecondSaturday(year, month, d);
         const isGovHol = holidaysSet.has(iso);
 
         if (!isSun && !is2ndSat && !isGovHol) {
-          remainingWorkingDays++;
+          totalWorkingDays++;
+          if (loggedDates.has(iso)) {
+            loggedWorkingDays++;
+          }
         }
       }
+
+      // Without any log, all working days of the month (e.g. 24) are available to earn comp off
+      // As attendance is logged, remaining unlogged working days count down
+      const remainingWorkingDays = (loggedDates.size === 0)
+        ? totalWorkingDays
+        : Math.max(0, totalWorkingDays - loggedWorkingDays);
 
       return { totalExtraSec, remainingWorkingDays };
     }
@@ -544,7 +544,7 @@
         this.valMinutes.textContent = String(m).padStart(2, '0');
         this.valSeconds.textContent = String(s).padStart(2, '0');
         this.valTotalMinutes.textContent = `(~${totalMinutes} Minutes)`;
-        this.valTargetDesc.textContent = 'For a day of Compensatory-off.';
+        this.valTargetDesc.textContent = 'For a day of Compensatory Off.';
         this.valDaysRemaining.textContent = remainingWorkingDays;
       }
     }
@@ -631,6 +631,7 @@
 
         if (isHolidayOnly) {
           const displayName = holName || 'Public Holiday';
+          tr.style.cursor = 'default';
           tr.innerHTML = `
             <td class="cell-date">${dateFormatted}</td>
             <td class="cell-day">${dayName}</td>
@@ -695,9 +696,10 @@
             <td class="cell-time">${outDisplay}</td>
             <td class="cell-remarks">${remarksHtml}</td>
           `;
+
+          tr.addEventListener('click', () => this.openPunchModal(dateStr, rec ? rec.id : null, true));
         }
 
-        tr.addEventListener('click', () => this.openPunchModal(dateStr, rec ? rec.id : null, true));
         this.logTableBody.appendChild(tr);
       });
     }
@@ -814,13 +816,32 @@
       if (status === 'CL' && (duration === 'FN' || duration === 'AN' || duration === 'HALF')) effectiveStatus = 'CL_HALF';
 
       const holName = this.getHolidayName(this.entryDate.value);
+      if (holName) {
+        this.previewExtra.textContent = `Holiday (${holName})`;
+        this.previewExtra.className = 'extra-neutral';
+        return;
+      }
+
+      const inTime = this.entryInTime.value;
+      const outTime = this.entryOutTime.value;
+      const isFull = (effectiveStatus === 'OD' || effectiveStatus === 'CL');
+
+      if (!isFull && inTime && outTime) {
+        const inSec = TimeEngine.timeStrToSec(inTime);
+        const outSec = TimeEngine.timeStrToSec(outTime);
+        if (inSec !== null && outSec !== null && inSec >= outSec) {
+          this.previewExtra.textContent = 'Invalid (In ≥ Out)';
+          this.previewExtra.className = 'extra-neutral';
+          return;
+        }
+      }
 
       const mock = {
         date: this.entryDate.value || '2026-11-23',
         status: effectiveStatus,
         duration: duration,
-        inTime: this.entryInTime.value,
-        outTime: this.entryOutTime.value,
+        inTime: inTime,
+        outTime: outTime,
         isHoliday: !!holName
       };
       const res = TimeEngine.calculateRecord(mock, this.data.shiftStart, this.data.shiftEnd);
@@ -841,7 +862,32 @@
       const inTime = this.entryInTime.value;
       const outTime = this.entryOutTime.value;
 
-      if (!date) return;
+      if (!date) {
+        this.showToast('Please select a date');
+        return;
+      }
+
+      // 1. Do not allow attendance entry or edit on a holiday
+      const holName = this.getHolidayName(date);
+      if (holName) {
+        this.showToast(`Cannot log attendance on a holiday (${holName})`);
+        return;
+      }
+
+      // 2. Do not allow two entries for the same day
+      if (this.editingRecordId) {
+        const duplicate = this.data.records.find((r) => r.date === date && r.id !== this.editingRecordId);
+        if (duplicate) {
+          this.showToast(`An attendance record already exists for ${date}`);
+          return;
+        }
+      } else {
+        const existing = this.data.records.find((r) => r.date === date);
+        if (existing) {
+          this.showToast(`An attendance record already exists for ${date}`);
+          return;
+        }
+      }
 
       let effectiveStatus = status;
       if (status === 'OD') {
@@ -854,7 +900,21 @@
 
       const isFullODorLeave = (effectiveStatus === 'OD' || effectiveStatus === 'CL');
 
-      let rec = this.data.records.find((r) => r.id === this.editingRecordId) || this.data.records.find((r) => r.date === date);
+      // 3. Punch In time must be strictly earlier than Punch Out time
+      if (!isFullODorLeave) {
+        if (!inTime || !outTime) {
+          this.showToast('Please enter both Punch In and Punch Out times');
+          return;
+        }
+        const inSec = TimeEngine.timeStrToSec(inTime);
+        const outSec = TimeEngine.timeStrToSec(outTime);
+        if (inSec === null || outSec === null || inSec >= outSec) {
+          this.showToast('Punch In time must be earlier than Punch Out time');
+          return;
+        }
+      }
+
+      let rec = this.editingRecordId ? this.data.records.find((r) => r.id === this.editingRecordId) : null;
 
       if (rec) {
         rec.date = date;
