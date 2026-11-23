@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#12151e">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>Comp-Off Tracker</title>
+  
+  <link rel="manifest" href="manifest.json">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <div id="app" class="app-container">
+
+    <!-- ================= 1. HOME SCREEN (PURE MINIMALIST WELCOME) ================= -->
+    <main id="viewHome" class="view-panel active">
+      <div class="minimal-welcome-container">
+        
+        <div class="greeting-section">
+          <p class="text-hi">Hi</p>
+          <h1 class="text-name" id="displayUserName">Swaroop,</h1>
+        </div>
+
+        <!-- STATE A: When 10 hours goal is achieved -->
+        <div id="heroAchievedState" class="hero-achieved-box" style="display: none;">
+          <h2 class="text-congrats">Congratulations,</h2>
+          <p class="text-credited">1 day compensatory off credited for this month.</p>
+          <p class="text-see-you">See you next month.</p>
+        </div>
+
+        <!-- STATE B: When still working towards 10 hours goal -->
+        <div id="heroCountdownState" class="hero-countdown-box">
+          <div class="need-section">
+            <p class="text-you-need">You need</p>
+
+            <div class="time-digits-row">
+              <!-- Hours (Orange) -->
+              <div class="digit-box box-orange">
+                <span class="digit-val" id="valHours">3</span>
+                <div class="unit-box">
+                  <span class="unit-letter">h</span>
+                  <span class="unit-word">Hours</span>
+                </div>
+              </div>
+
+              <!-- Minutes (Cyan) -->
+              <div class="digit-box box-cyan">
+                <span class="digit-val" id="valMinutes">52</span>
+                <div class="unit-box">
+                  <span class="unit-letter">m</span>
+                  <span class="unit-word">Minutes</span>
+                </div>
+              </div>
+
+              <!-- Seconds (White) -->
+              <div class="digit-box box-white">
+                <span class="digit-val" id="valSeconds">12</span>
+                <div class="unit-box">
+                  <span class="unit-letter">s</span>
+                  <span class="unit-word">Seconds</span>
+                </div>
+              </div>
+            </div>
+
+            <p class="text-total-minutes" id="valTotalMinutes">(~232 Minutes)</p>
+          </div>
+
+          <div class="days-section">
+            <p class="text-in">In</p>
+            <div class="days-number-row">
+              <span class="text-days-val" id="valDaysRemaining">6</span>
+              <span class="text-days-word">Days</span>
+            </div>
+          </div>
+
+          <div class="footer-target-section">
+            <p class="text-target-desc" id="valTargetDesc">For a day of Compensatory-off.</p>
+            <span class="sparkle-symbol" id="btnSparkleAction" title="Log Punch">✦</span>
+          </div>
+        </div>
+
+      </div>
+    </main>
+
+    <!-- ================= 2. ATTENDANCE LOG VIEW (TABULAR LAYOUT) ================= -->
+    <section id="viewLog" class="view-panel">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2 class="panel-title">Attendance Log</h2>
+          <button id="btnLogNewPunch" class="btn-pill-action">+ Punch In/Out</button>
+        </div>
+
+        <!-- Clean Tabular Layout -->
+        <div class="table-container">
+          <table class="minimal-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Day</th>
+                <th>Punch In</th>
+                <th>Punch Out</th>
+              </tr>
+            </thead>
+            <tbody id="logTableBody">
+              <!-- Populated dynamically by JS -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+
+    <!-- ================= 3. SETTINGS & HOLIDAYS VIEW ================= -->
+    <section id="viewSettings" class="view-panel">
+      <div class="panel-inner">
+        <div class="panel-header">
+          <h2 class="panel-title">Settings</h2>
+        </div>
+
+        <!-- Name Card -->
+        <div class="minimal-card">
+          <label class="setting-lbl">YOUR NAME</label>
+          <div class="input-inline-wrap">
+            <input type="text" id="inputSettingsName" class="minimal-input" placeholder="Enter your name">
+            <button id="btnSaveName" class="btn-pill-action">Update</button>
+          </div>
+        </div>
+
+        <!-- Office Hours Card -->
+        <div class="minimal-card">
+          <label class="setting-lbl">OFFICE HOURS</label>
+          <div class="input-inline-wrap">
+            <div class="time-field-wrap">
+              <span class="field-sub-lbl">In:</span>
+              <input type="time" id="cfgShiftStart" class="minimal-input-time" value="10:15:00" step="1">
+            </div>
+            <div class="time-field-wrap">
+              <span class="field-sub-lbl">Out:</span>
+              <input type="time" id="cfgShiftEnd" class="minimal-input-time" value="17:15:00" step="1">
+            </div>
+            <button id="btnSaveShiftTimes" class="btn-pill-action">Save</button>
+          </div>
+        </div>
+
+        <!-- Government Holidays Card -->
+        <div class="minimal-card">
+          <div class="flex-between">
+            <label class="setting-lbl">GOVERNMENT HOLIDAYS</label>
+            <button id="btnOpenBulkHolidays" class="btn-link">Bulk Edit</button>
+          </div>
+          <div class="add-hol-row">
+            <input type="date" id="newHolidayDate" class="minimal-input-time">
+            <input type="text" id="newHolidayName" class="minimal-input" placeholder="Holiday Name">
+            <button id="btnAddHoliday" class="btn-add-circle">+</button>
+          </div>
+          <div class="holidays-minimal-list" id="holidaysListContainer"></div>
+        </div>
+
+      </div>
+    </section>
+
+    <!-- ================= MINIMAL BOTTOM NAVIGATION ================= -->
+    <nav class="bottom-nav">
+      <button class="nav-btn active" data-tab="viewHome">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path>
+          <polyline points="9 22 9 12 15 12 15 22"></polyline>
+        </svg>
+        <span>Home</span>
+      </button>
+
+      <button class="nav-btn" data-tab="viewLog">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+          <polyline points="14 2 14 8 20 8"></polyline>
+          <line x1="16" y1="13" x2="8" y2="13"></line>
+          <line x1="16" y1="17" x2="8" y2="17"></line>
+        </svg>
+        <span>Log</span>
+      </button>
+
+      <button class="nav-btn" data-tab="viewSettings">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Settings</span>
+      </button>
+    </nav>
+
+    <!-- ================= ONBOARDING MODAL (NAME ONLY) ================= -->
+    <div id="modalNameOnboarding" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-dialog">
+        <h3 class="onboarding-title">Welcome</h3>
+        <p class="onboarding-desc">What should we call you?</p>
+        <form id="formOnboarding">
+          <input type="text" id="onboardingInputName" class="minimal-input-large" placeholder="Enter your name" required autofocus>
+          <button type="submit" class="btn-primary-large">Get Started</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- ================= PUNCH / LOG MODAL ================= -->
+    <div id="modalPunch" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-sheet">
+        <div class="drag-handle"></div>
+        <div class="modal-header-clean">
+          <h3 id="modalPunchTitle" class="modal-heading">Log Attendance</h3>
+          <button id="btnClosePunchModal" class="btn-close">&times;</button>
+        </div>
+
+        <form id="formPunch">
+          <input type="hidden" id="entryRecordId">
+          
+          <div class="form-row">
+            <label for="entryDate">Date</label>
+            <input type="date" id="entryDate" class="minimal-input" required>
+          </div>
+
+          <div class="form-row">
+            <label for="entryStatus">Status</label>
+            <select id="entryStatus" class="minimal-select">
+              <option value="P">Present</option>
+              <option value="OD">On Duty (OD) - Full Day</option>
+              <option value="OD_HALF">On Duty (OD) - Half Day</option>
+              <option value="CL">Leave - Full Day</option>
+              <option value="CL_HALF">Leave - Half Day</option>
+            </select>
+          </div>
+
+          <div id="punchTimesBlock" class="punch-times-block">
+            <div class="form-row">
+              <label for="entryInTime">Punch In Time</label>
+              <input type="time" id="entryInTime" class="minimal-input" step="1">
+            </div>
+
+            <div class="form-row">
+              <label for="entryOutTime">Punch Out Time</label>
+              <input type="time" id="entryOutTime" class="minimal-input" step="1">
+            </div>
+
+            <div class="calc-preview">
+              <span>Session: <strong id="previewSession">--</strong></span>
+              <span>Extra: <strong id="previewExtra">--:--:--</strong></span>
+            </div>
+          </div>
+
+          <div class="modal-actions-row">
+            <button type="button" id="btnDeleteRecord" class="btn-del-record" style="display: none;">Delete</button>
+            <button type="submit" class="btn-save-record">Save</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Bulk Holidays Modal -->
+    <div id="modalBulkHolidays" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-sheet">
+        <div class="drag-handle"></div>
+        <div class="modal-header-clean">
+          <h3 class="modal-heading">Bulk Edit Holidays</h3>
+          <button id="btnCloseBulkHolidays" class="btn-close">&times;</button>
+        </div>
+        <textarea id="bulkHolidaysText" class="bulk-textarea" rows="8"></textarea>
+        <button id="btnSaveBulkHolidays" class="btn-save-record">Save All</button>
+      </div>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastNotification" class="toast-bar" aria-live="polite"></div>
+
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>
