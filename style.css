@@ -511,9 +511,7 @@ html, body {
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 180px;
-  overflow-y: auto;
-  margin-top: 4px;
+  margin-top: 6px;
 }
 
 .hol-row {

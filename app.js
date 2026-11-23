@@ -24,31 +24,8 @@
     { date: '2026-12-25', name: 'Christmas' }
   ];
 
-  // Authentic November 2026 portal records
-  const DEMO_RECORDS = [
-    { id: 'rec-1', date: '2026-11-01', inTime: '', outTime: '', status: 'PH' },
-    { id: 'rec-2', date: '2026-11-02', inTime: '08:25:09', outTime: '17:48:10', status: 'P' },
-    { id: 'rec-3', date: '2026-11-03', inTime: '08:47:31', outTime: '17:15:39', status: 'P' },
-    { id: 'rec-4', date: '2026-11-04', inTime: '10:05:01', outTime: '17:45:53', status: 'P' },
-    { id: 'rec-5', date: '2026-11-05', inTime: '10:03:37', outTime: '16:21:51', status: 'P' },
-    { id: 'rec-6', date: '2026-11-06', inTime: '07:31:45', outTime: '16:47:43', status: 'P' },
-    { id: 'rec-7', date: '2026-11-07', inTime: '09:49:05', outTime: '18:48:04', status: 'P' },
-    { id: 'rec-8', date: '2026-11-08', inTime: '', outTime: '', status: 'PH' },
-    { id: 'rec-9', date: '2026-11-09', inTime: '', outTime: '', status: 'OD' },
-    { id: 'rec-10', date: '2026-11-10', inTime: '09:48:10', outTime: '17:15:08', status: 'P' },
-    { id: 'rec-11', date: '2026-11-11', inTime: '09:40:59', outTime: '17:15:08', status: 'P' },
-    { id: 'rec-12', date: '2026-11-12', inTime: '09:43:09', outTime: '17:15:08', status: 'P' },
-    { id: 'rec-13', date: '2026-11-13', inTime: '09:39:54', outTime: '16:17:24', status: 'P' },
-    { id: 'rec-14', date: '2026-11-14', inTime: '', outTime: '', status: 'PH' },
-    { id: 'rec-15', date: '2026-11-15', inTime: '', outTime: '', status: 'PH' },
-    { id: 'rec-16', date: '2026-11-16', inTime: '09:31:06', outTime: '17:36:52', status: 'P' },
-    { id: 'rec-17', date: '2026-11-17', inTime: '09:49:04', outTime: '17:39:55', status: 'P' },
-    { id: 'rec-18', date: '2026-11-18', inTime: '09:35:45', outTime: '17:22:15', status: 'P' },
-    { id: 'rec-19', date: '2026-11-19', inTime: '09:50:45', outTime: '17:18:01', status: 'P' },
-    { id: 'rec-20', date: '2026-11-20', inTime: '09:49:30', outTime: '17:21:59', status: 'P' },
-    { id: 'rec-21', date: '2026-11-21', inTime: '10:08:16', outTime: '13:01:43', status: 'P' },
-    { id: 'rec-22', date: '2026-11-22', inTime: '', outTime: '', status: 'PH' }
-  ];
+  // Empty records to start afresh
+  const DEMO_RECORDS = [];
 
   // ==========================================================================
   // TIME UTILITIES
@@ -174,7 +151,15 @@
         const raw = localStorage.getItem(STORAGE_KEY);
         if (raw) {
           const parsed = JSON.parse(raw);
-          if (parsed) return parsed;
+          if (parsed) {
+            // One-time clear of old demo records to start afresh
+            if (!parsed.clearedInitialDemo) {
+              parsed.records = [];
+              parsed.clearedInitialDemo = true;
+              this.save(parsed);
+            }
+            return parsed;
+          }
         }
       } catch (e) {
         console.error(e);
@@ -196,7 +181,8 @@
         shiftStart: '10:15:00',
         shiftEnd: '17:15:00',
         holidays: [...DEFAULT_HOLIDAYS],
-        records: [...DEMO_RECORDS]
+        records: [],
+        clearedInitialDemo: true
       };
       this.save(data);
       return data;
@@ -253,6 +239,7 @@
       this.btnAddHoliday = document.getElementById('btnAddHoliday');
       this.holidaysListContainer = document.getElementById('holidaysListContainer');
       this.btnOpenBulkHolidays = document.getElementById('btnOpenBulkHolidays');
+      this.btnClearAllRecords = document.getElementById('btnClearAllRecords');
 
       // Modals
       this.modalNameOnboarding = document.getElementById('modalNameOnboarding');
@@ -442,6 +429,19 @@
         this.renderHome();
         this.showToast('Holidays updated');
       });
+
+      // Clear all attendance records to start afresh
+      if (this.btnClearAllRecords) {
+        this.btnClearAllRecords.addEventListener('click', () => {
+          if (confirm('Clear all attendance logs to start afresh?')) {
+            this.data.records = [];
+            if (this.data.excludedDates) this.data.excludedDates = [];
+            Storage.save(this.data);
+            this.renderAll();
+            this.showToast('All attendance logs cleared');
+          }
+        });
+      }
     }
 
     openOnboarding() {

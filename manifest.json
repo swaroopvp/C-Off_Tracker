@@ -1,5 +1,5 @@
 {
-  "name": "Comp-Off Attendance Tracker",
+  "name": "Compensatory Off Tracker",
   "short_name": "CompOff",
   "description": "Mobile-first office attendance tracker and Compensatory Off (Comp-Off) hours calculator",
   "start_url": "./index.html",

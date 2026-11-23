@@ -6,7 +6,7 @@
   <meta name="theme-color" content="#12151e">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Comp-Off Tracker</title>
+  <title>Compensatory Off Tracker</title>
   
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
@@ -151,6 +151,15 @@
             <button id="btnAddHoliday" class="btn-pill-action">+ Add</button>
           </div>
           <div class="holidays-minimal-list" id="holidaysListContainer"></div>
+        </div>
+
+        <!-- Attendance Data Card -->
+        <div class="minimal-card">
+          <label class="setting-lbl">ATTENDANCE DATA</label>
+          <div class="flex-between" style="margin-top: 6px;">
+            <span style="font-size: 13px; color: var(--text-muted);">Reset all logged entries to start fresh</span>
+            <button type="button" id="btnClearAllRecords" class="btn-del-record" style="font-size: 11.5px; padding: 6px 12px;">Clear Logs</button>
+          </div>
         </div>
 
       </div>
