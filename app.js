@@ -180,7 +180,8 @@
         holidays: [...DEFAULT_HOLIDAYS],
         records: [],
         clearedInitialDemo: true,
-        hasOnlyChristmasHoliday: true
+        hasOnlyChristmasHoliday: true,
+        fontSize: 'default'
       };
       this.save(data);
       return data;
@@ -197,6 +198,8 @@
 
       this.initElements();
       this.bindEvents();
+
+      this.applyFontSize(this.data && this.data.fontSize ? this.data.fontSize : 'default');
 
       if (!this.data || !this.data.name) {
         this.openOnboarding();
@@ -227,6 +230,7 @@
       this.logTableBody = document.getElementById('logTableBody');
 
       // Settings elements
+      this.fontSizeButtons = document.querySelectorAll('.btn-size-pill');
       this.inputSettingsName = document.getElementById('inputSettingsName');
       this.btnSaveName = document.getElementById('btnSaveName');
       this.cfgShiftStart = document.getElementById('cfgShiftStart');
@@ -358,6 +362,16 @@
       });
 
       this.btnClosePunchModal.addEventListener('click', () => this.closePunchModal());
+
+      // Settings: Font Size Pills
+      if (this.fontSizeButtons) {
+        this.fontSizeButtons.forEach((btn) => {
+          btn.addEventListener('click', () => {
+            const size = btn.getAttribute('data-size');
+            this.setFontSize(size);
+          });
+        });
+      }
 
       // Settings: Update Name
       this.btnSaveName.addEventListener('click', () => {
@@ -700,6 +714,38 @@
 
       this.cfgShiftStart.value = start;
       this.cfgShiftEnd.value = end;
+
+      this.applyFontSize(this.data && this.data.fontSize ? this.data.fontSize : 'default');
+    }
+
+    setFontSize(size) {
+      if (!this.data) return;
+      this.data.fontSize = size;
+      Storage.save(this.data);
+      this.applyFontSize(size);
+      const labelMap = {
+        small: 'Small',
+        default: 'Default',
+        large: 'Large',
+        xlarge: 'Extra Large'
+      };
+      this.showToast(`Font size: ${labelMap[size] || size}`);
+    }
+
+    applyFontSize(size = 'default') {
+      const scaleMap = {
+        small: 0.88,
+        default: 1.0,
+        large: 1.15,
+        xlarge: 1.30
+      };
+      const scale = scaleMap[size] || 1.0;
+      document.documentElement.style.setProperty('--ui-font-scale', scale);
+      if (this.fontSizeButtons) {
+        this.fontSizeButtons.forEach((btn) => {
+          btn.classList.toggle('active', btn.getAttribute('data-size') === size);
+        });
+      }
     }
 
     renderHolidaysList() {
