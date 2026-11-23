@@ -97,11 +97,12 @@ html, body {
 }
 
 .text-credited {
-  font-size: 19px;
+  font-size: clamp(14px, 3.8vw, 16px);
   font-weight: 400;
   color: #e2e8f0;
-  line-height: 1.45;
+  line-height: 1.4;
   margin-bottom: 24px;
+  white-space: nowrap;
 }
 
 .text-see-you {
