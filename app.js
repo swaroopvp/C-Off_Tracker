@@ -491,30 +491,18 @@
       const totalDaysInMonth = new Date(year, month + 1, 0).getDate();
       const holidaysSet = new Set(this.data.holidays.map((h) => h.date));
 
-      // Calculate total working days in this month and how many working days have been logged
-      let totalWorkingDays = 0;
-      let loggedWorkingDays = 0;
-      const loggedDates = new Set((this.data.records || []).map((r) => r.date));
-
-      for (let d = 1; d <= totalDaysInMonth; d++) {
+      // Calculate remaining working days strictly from current date to end of month in all cases
+      let remainingWorkingDays = 0;
+      for (let d = currentDay; d <= totalDaysInMonth; d++) {
         const iso = TimeEngine.formatDateISO(new Date(year, month, d));
         const isSun = TimeEngine.isSunday(year, month, d);
         const is2ndSat = TimeEngine.isSecondSaturday(year, month, d);
         const isGovHol = holidaysSet.has(iso);
 
         if (!isSun && !is2ndSat && !isGovHol) {
-          totalWorkingDays++;
-          if (loggedDates.has(iso)) {
-            loggedWorkingDays++;
-          }
+          remainingWorkingDays++;
         }
       }
-
-      // Without any log, all working days of the month (e.g. 24) are available to earn comp off
-      // As attendance is logged, remaining unlogged working days count down
-      const remainingWorkingDays = (loggedDates.size === 0)
-        ? totalWorkingDays
-        : Math.max(0, totalWorkingDays - loggedWorkingDays);
 
       return { totalExtraSec, remainingWorkingDays };
     }
