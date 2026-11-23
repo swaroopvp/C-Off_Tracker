@@ -295,6 +295,71 @@ html, body {
 }
 
 /* ==========================================================================
+   MONTH NAVIGATION BAR
+   ========================================================================== */
+.month-nav-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--bg-card);
+  border: 1px solid var(--border-subtle);
+  border-radius: 12px;
+  padding: 8px 12px;
+  margin-bottom: 2px;
+}
+
+.btn-month-arrow {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.btn-month-arrow:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--color-cyan);
+}
+
+.month-picker-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  padding: 4px 10px;
+  border-radius: 8px;
+  transition: background 0.15s ease;
+}
+
+.month-picker-wrap:hover {
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.text-month-heading {
+  font-size: 14.5px;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: -0.2px;
+}
+
+.hidden-month-input {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+}
+
+/* ==========================================================================
    TABULAR LOG LAYOUT
    ========================================================================== */
 .table-container {
