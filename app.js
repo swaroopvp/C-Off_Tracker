@@ -23,9 +23,35 @@
 
 
   const DEFAULT_HOLIDAYS = [
-
-    { date: '2026-12-25', name: 'Christmas' }
-
+    { date: '2026-12-25', name: 'Christmas' },
+    { date: '2027-01-02', name: 'Mannam Jayanthi' },
+    { date: '2027-01-26', name: 'Republic Day' },
+    { date: '2027-03-06', name: 'Maha Sivarathri' },
+    { date: '2027-03-10', name: 'Id-ul-Fitr (Ramzan)' },
+    { date: '2027-03-25', name: 'Maundy Thursday' },
+    { date: '2027-03-26', name: 'Good Friday' },
+    { date: '2027-03-28', name: 'Easter' },
+    { date: '2027-04-14', name: 'Dr. B.R. Ambedkar Jayanthi' },
+    { date: '2027-04-15', name: 'Vishu' },
+    { date: '2027-05-01', name: 'May Day' },
+    { date: "2027-05-17", name: "Id-ul-Ad'ha (Bakrid)" },
+    { date: '2027-06-15', name: 'Muharram' },
+    { date: '2027-08-02', name: 'Karkadaka Vavu' },
+    { date: '2027-08-14', name: 'Milad-i-Sherif' },
+    { date: '2027-08-15', name: 'Independence Day' },
+    { date: '2027-08-24', name: 'Sreekrishna Jayanthi' },
+    { date: '2027-08-28', name: 'Ayyan Kali Jayanthi' },
+    { date: '2027-09-11', name: 'First Onam' },
+    { date: '2027-09-12', name: 'Thiruvonam' },
+    { date: '2027-09-13', name: 'Third Onam' },
+    { date: '2027-09-14', name: 'Fourth Onam' },
+    { date: '2027-09-15', name: 'Sree Narayana Guru Jayanthi' },
+    { date: '2027-09-22', name: 'Sree Narayana Guru Samadhi' },
+    { date: '2027-10-02', name: 'Gandhi Jayanthi' },
+    { date: '2027-10-09', name: 'Mahanavami' },
+    { date: '2027-10-10', name: 'Vijayadasami' },
+    { date: '2027-10-28', name: 'Deepavali' },
+    { date: '2027-12-25', name: 'Christmas' }
   ];
 
 
@@ -310,6 +336,19 @@
 
               parsed.hasOnlyChristmasHoliday = true;
 
+            }
+            // Ensure 2027 official holidays are added to existing saved holidays
+            if (!parsed.has2027Holidays) {
+              const existingMap = new Map((parsed.holidays || []).map(h => [h.date, h.name]));
+              DEFAULT_HOLIDAYS.forEach(h => {
+                if (!existingMap.has(h.date)) {
+                  existingMap.set(h.date, h.name);
+                }
+              });
+              parsed.holidays = Array.from(existingMap.entries())
+                .map(([date, name]) => ({ date, name }))
+                .sort((a, b) => a.date.localeCompare(b.date));
+              parsed.has2027Holidays = true;
             }
 
 
