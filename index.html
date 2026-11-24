@@ -8,8 +8,14 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Compensatory Off Tracker</title>
   
+  <link rel="icon" type="image/x-icon" href="favicon.ico">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="style.css">
+
+  <!-- SheetJS, PDF.js & Tesseract for Excel/CSV/PDF/OCR Parsing -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </head>
 <body>
   <div id="app" class="app-container">
@@ -85,8 +91,12 @@
       <div class="panel-inner">
         <div class="panel-header">
           <h2 class="panel-title">Attendance Log</h2>
-          <button id="btnLogNewPunch" class="btn-pill-action">+ Add</button>
+          <div class="panel-actions-group">
+            <button id="btnSparkImageUpload" class="btn-pill-action" title="Upload Attendance">Upload</button>
+            <button id="btnLogNewPunch" class="btn-pill-action" title="Add Attendance Entry">Add</button>
+          </div>
         </div>
+        <input type="file" id="inputSparkFile" accept="image/*,.pdf,.xlsx,.xls,.csv" style="display: none;">
 
         <!-- Clean Tabular Layout (Present Month Only) -->
         <div class="table-container">
@@ -280,6 +290,72 @@
         </div>
         <textarea id="bulkHolidaysText" class="bulk-textarea" rows="8"></textarea>
         <button id="btnSaveBulkHolidays" class="btn-save-record">Save All</button>
+      </div>
+    </div>
+
+    <!-- SPARK Import Preview Modal -->
+    <div id="modalSparkImport" class="modal-backdrop" aria-hidden="true">
+      <div class="modal-sheet modal-sheet-large">
+        <div class="drag-handle"></div>
+        <div class="modal-header-clean">
+          <h3 class="modal-heading">Import from SPARK</h3>
+          <button id="btnCloseSparkImport" class="btn-close">&times;</button>
+        </div>
+
+        <!-- File Upload Dropzone / Quick Actions -->
+        <div class="spark-upload-zone" id="sparkDropZone">
+          <div class="spark-upload-text-group">
+            <span class="spark-upload-main-text">Upload SPARK Attendance</span>
+            <span class="spark-upload-sub-text">Official PDF, screenshot, Excel or CSV &middot; Ctrl+V to paste</span>
+          </div>
+          <div class="spark-upload-btns-row">
+            <button type="button" class="btn-spark-browse" id="btnBrowseSparkFile">Choose File</button>
+            <button type="button" class="btn-spark-paste-img" id="btnPasteSparkImage">Paste Image</button>
+            <button type="button" class="btn-spark-paste" id="btnTogglePasteArea">Paste Table Text</button>
+          </div>
+        </div>
+
+        <!-- Quick Paste Area (Collapsible) -->
+        <div id="sparkPasteBox" class="spark-paste-box" style="display: none;">
+          <textarea id="sparkPasteText" class="bulk-textarea" rows="4" placeholder="Paste SPARK table rows or CSV text here... (Ctrl+V)"></textarea>
+          <button type="button" id="btnParsePastedText" class="btn-spark-parse-text">Parse Pasted Data</button>
+        </div>
+
+        <!-- Status / Loading Indicator -->
+        <div id="sparkImportStatus" class="spark-status-box" style="display: none;">
+          <div class="spinner-inline"></div>
+          <span id="sparkStatusText">Extracting attendance timings...</span>
+        </div>
+
+        <!-- Extracted Records Table Preview -->
+        <div id="sparkPreviewContainer" style="display: none;">
+          <div class="spark-summary-bar">
+            <span id="sparkSummaryStats" class="spark-summary-stat-text">0 working days found</span>
+          </div>
+
+          <div class="spark-preview-table-wrap">
+            <table class="minimal-table spark-table">
+              <thead>
+                <tr>
+                  <th style="width: 28px;"><input type="checkbox" id="chkSelectAllSpark" checked></th>
+                  <th>Date</th>
+                  <th>Status</th>
+                  <th>Punch In</th>
+                  <th>Punch Out</th>
+                  <th>Remarks</th>
+                </tr>
+              </thead>
+              <tbody id="sparkPreviewBody">
+                <!-- Populated dynamically by JS -->
+              </tbody>
+            </table>
+          </div>
+
+          <div class="modal-actions-row">
+            <button type="button" id="btnCancelSparkImport" class="btn-del-record">Cancel</button>
+            <button type="button" id="btnConfirmSparkImport" class="btn-save-record">Confirm & Import</button>
+          </div>
+        </div>
       </div>
     </div>
 

@@ -1001,3 +1001,263 @@ html, body {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
 }
+
+/* ==========================================================================
+   SPARK IMPORT & OCR STYLES
+   ========================================================================== */
+.panel-actions-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.modal-sheet-large {
+  max-height: 90vh;
+}
+
+.spark-upload-zone {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1.5px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 20px 16px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 16px;
+  text-align: center;
+  margin-bottom: 12px;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.spark-upload-zone.dragover {
+  border-color: var(--color-cyan);
+  background: rgba(56, 189, 248, 0.05);
+}
+
+.spark-upload-text-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.spark-upload-main-text {
+  font-size: calc(13px * var(--ui-font-scale));
+  font-weight: 600;
+  color: #ffffff;
+}
+
+.spark-upload-sub-text {
+  font-size: calc(11px * var(--ui-font-scale));
+  color: var(--text-muted);
+  line-height: 1.4;
+}
+
+.spark-upload-btns-row {
+  display: flex;
+  gap: 8px;
+  width: 100%;
+}
+
+.btn-spark-browse {
+  flex: 1;
+  background: #0284c7;
+  color: #ffffff;
+  border: none;
+  padding: 9px 8px;
+  border-radius: 8px;
+  font-size: calc(11.5px * var(--ui-font-scale));
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-spark-browse:hover {
+  background: #0369a1;
+}
+
+.btn-spark-paste-img {
+  flex: 1;
+  background: #1e293b;
+  border: 1px solid var(--border-subtle);
+  color: #f1f5f9;
+  padding: 9px 8px;
+  border-radius: 8px;
+  font-size: calc(11.5px * var(--ui-font-scale));
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-spark-paste-img:hover {
+  background: #2b394f;
+  border-color: rgba(255, 255, 255, 0.25);
+}
+
+.btn-spark-paste {
+  flex: 1;
+  background: #1e293b;
+  border: 1px solid var(--border-subtle);
+  color: #94a3b8;
+  padding: 9px 8px;
+  border-radius: 8px;
+  font-size: calc(11.5px * var(--ui-font-scale));
+  font-weight: 500;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.15s ease;
+}
+
+.btn-spark-paste:hover {
+  background: #2b394f;
+  color: #f1f5f9;
+}
+
+.spark-paste-box {
+  margin-bottom: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.btn-spark-parse-text {
+  background: #1e293b;
+  border: 1px solid var(--border-subtle);
+  color: #ffffff;
+  padding: 7px;
+  border-radius: 6px;
+  font-size: calc(11px * var(--ui-font-scale));
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.spark-status-box {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  padding: 12px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  font-size: calc(12px * var(--ui-font-scale));
+  color: var(--color-cyan);
+}
+
+.spinner-inline {
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(56, 189, 248, 0.2);
+  border-top-color: var(--color-cyan);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.spark-summary-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 4px;
+  margin-bottom: 8px;
+  font-size: calc(11.5px * var(--ui-font-scale));
+}
+
+.spark-summary-stat-text {
+  color: #ffffff;
+  font-weight: 600;
+}
+
+.spark-preview-table-wrap {
+  max-height: 38vh;
+  overflow-x: auto;
+  overflow-y: auto;
+  border: 1px solid var(--border-subtle);
+  border-radius: 8px;
+  margin-bottom: 12px;
+  background: var(--bg-card);
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(56, 189, 248, 0.35) rgba(15, 23, 42, 0.6);
+}
+
+.spark-preview-table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.spark-preview-table-wrap::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.6);
+  border-radius: 4px;
+}
+
+.spark-preview-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(56, 189, 248, 0.35);
+  border-radius: 4px;
+}
+
+.spark-preview-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(56, 189, 248, 0.6);
+}
+
+.spark-preview-table-wrap::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
+.spark-preview-table-wrap::-webkit-scrollbar-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+::-webkit-scrollbar-button:start,
+::-webkit-scrollbar-button:end,
+::-webkit-scrollbar-button:single-button {
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
+}
+
+.spark-table {
+  min-width: 480px;
+  white-space: nowrap;
+}
+
+.spark-table th,
+.spark-table td {
+  padding: 8px 10px;
+  vertical-align: middle;
+}
+
+.spark-table th {
+  position: sticky;
+  top: 0;
+  background: #181d2a;
+  z-index: 2;
+}
+
+.row-holiday-excluded {
+  opacity: 0.45;
+  background: rgba(248, 113, 113, 0.03);
+}
+
+.row-holiday-excluded td {
+  color: #718096 !important;
+}
+
+.badge-excluded-tag {
+  color: var(--color-red);
+  font-weight: 600;
+  font-size: calc(9.5px * var(--ui-font-scale));
+}
